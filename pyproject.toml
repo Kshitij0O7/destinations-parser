@@ -1,0 +1,22 @@
+[project]
+name = "travel-transcript"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Kshitij0O7", email = "kshitij.mahajan.20042@iitgoa.ac.in" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "boto3>=1.43.114",
+    "ollama>=0.6.3",
+    "python-dotenv>=1.2.4",
+    "supadata>=1.6.0",
+]
+
+[project.scripts]
+travel-transcript = "travel_transcript:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
