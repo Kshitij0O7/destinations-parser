@@ -50,18 +50,22 @@ def _merge(existing, new):
 
 
 def load(city):
-    """Read a city's stored places. Returns the dict, or None if not stored."""
+    """Read a city's stored places.
+
+    Returns the dict, or None only when the city is genuinely not stored.
+    Anything else -- bad credentials, a network failure, a missing bucket --
+    raises. A broken R2 connection must not look like an empty cache, or a
+    batch run would reprocess every city and spend credits re-deriving data
+    it already had.
+    """
     try:
         obj = _client().get_object(Bucket=BUCKET, Key=_key(city))
         return json.loads(obj["Body"].read())
     except ClientError as e:
+        # A missing key is a cache miss; a missing bucket is a real problem.
         if e.response["Error"]["Code"] in ("NoSuchKey", "404"):
-            return None  # Cache miss -- the caller decides whether to build.
-        print(f"load failed for {city}: {e}")
-        return None
-    except Exception as e:
-        print(f"load failed for {city}: {e}")
-        return None
+            return None  # The caller decides whether to build.
+        raise
 
 
 def save(places, city):
