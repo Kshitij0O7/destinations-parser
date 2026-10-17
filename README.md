@@ -27,6 +27,18 @@ Travel YouTube holds recommendations that aren't well indexed anywhere else —
 the stall with no sign, the viewpoint five minutes past where everyone stops.
 This extracts that into something queryable.
 
+## Where this fits
+
+This is the content retrieval layer for **Travel Buddy**, not a standalone
+product. Travel Buddy's content agent owns the orchestration:
+
+- `get_videos` finds candidate videos for a place
+- `get_places` reads the R2 bucket and, when a place has no data, triggers this
+  job to populate it
+
+So this repo does one thing: **a video URL in, a place record in R2 out.**
+Deciding *which* videos to process, and when, belongs to the agent.
+
 ## Pipeline
 
 ```
@@ -36,8 +48,7 @@ YouTube URL
    -> save.py         merge into city record      (Cloudflare R2)
 ```
 
-`main.py` chains the three for one video. `batch.py` walks a seed list of
-cities and is the entry point for the scheduled job.
+`main.py` chains the three. It is the only entry point.
 
 ## Setup
 
@@ -70,31 +81,25 @@ uv run transcript.py "<url>" > kyoto.txt   # transcript only
 uv run translate.py kyoto.txt              # extraction only
 ```
 
-Batch over `cities.json`, skipping cities already in R2:
-
-```bash
-uv run batch.py              # pre-warm new cities
-uv run batch.py --refresh    # reprocess stored cities too
-```
-
 ## Deployment
 
-The container runs Ollama and the batch as a single short-lived job: the
-entrypoint starts `ollama serve`, runs `batch.py`, and exits. Nothing persists
-between runs, so a weekly schedule costs only the hours it actually runs.
+The container runs Ollama and the pipeline as a single short-lived job: the
+entrypoint starts `ollama serve`, runs `main.py` with the arguments it was
+given, and exits. Nothing persists between runs, so it only costs the time it
+actually runs.
 
 ```bash
 docker build --platform linux/amd64 -t travel-places .
-docker run --rm --env-file .env travel-places
+docker run --rm --env-file .env travel-places "https://www.youtube.com/watch?v=..."
 ```
 
 `--platform linux/amd64` matters — an image built natively on Apple Silicon
 won't start on an amd64 host.
 
-Then schedule it. On a VM:
+Running the same job on a schedule, on a VM:
 
 ```bash
-0 3 * * 0  docker run --rm --env-file /opt/travel/.env travel-places
+0 3 * * 0  docker run --rm --env-file /opt/travel/.env travel-places "<url>"
 ```
 
 The model is baked into the image at build time, so the cold start reads it

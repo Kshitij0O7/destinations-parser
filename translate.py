@@ -66,9 +66,17 @@ def extract_places(text, model=MODEL):
             # This is a reading task, not a reasoning one -- a thinking trace
             # would be discarded output we wait on.
             think=False,
-            # Ollama defaults num_ctx to 4096 and truncates silently past it.
-            # 8192 covers a long transcript plus the generated JSON.
-            options={"num_ctx": 8192, "temperature": 0},
+            options={
+                # Ollama defaults num_ctx to 4096 and truncates silently past
+                # it. 8192 covers a long transcript plus the generated JSON.
+                "num_ctx": 8192,
+                "temperature": 0,
+                # The model ships with presence_penalty 1.5, a chat default
+                # that penalises token reuse. Place names and stock phrases
+                # legitimately repeat across fields here, so it pushes the
+                # model toward padding and away from the transcript's wording.
+                "presence_penalty": 0,
+            },
         )
         return json.loads(response["message"]["content"])
 

@@ -49,23 +49,30 @@ def _merge(existing, new):
     return list(by_name.values())
 
 
-def load(city):
-    """Read a city's stored places.
+def _read(city):
+    """Read a city's stored record, or None if it isn't stored yet.
 
-    Returns the dict, or None only when the city is genuinely not stored.
-    Anything else -- bad credentials, a network failure, a missing bucket --
-    raises. A broken R2 connection must not look like an empty cache, or a
-    batch run would reprocess every city and spend credits re-deriving data
-    it already had.
+    save() uses this to merge into an existing object. Anything other than a
+    missing key -- bad credentials, a network failure, a missing bucket --
+    raises, because a broken R2 connection must not look like an empty bucket.
     """
     try:
         obj = _client().get_object(Bucket=BUCKET, Key=_key(city))
         return json.loads(obj["Body"].read())
     except ClientError as e:
-        # A missing key is a cache miss; a missing bucket is a real problem.
+        # A missing key means no data yet; a missing bucket is a real problem.
         if e.response["Error"]["Code"] in ("NoSuchKey", "404"):
-            return None  # The caller decides whether to build.
+            return None
         raise
+
+
+# The public R2 lookup. Not used by this pipeline -- Travel Buddy's `get_places`
+# tool does the lookup and triggers this job on a miss -- but kept here because
+# that tool needs exactly this call.
+#
+# def load(city):
+#     """Return a city's stored places, or None if we have no data for it."""
+#     return _read(city)
 
 
 def save(places, city):
@@ -74,7 +81,7 @@ def save(places, city):
     Returns the object key on success, or None on failure.
     """
     try:
-        existing = load(city)
+        existing = _read(city)
         merged = _merge(existing["places"] if existing else [], places)
 
         body = {
