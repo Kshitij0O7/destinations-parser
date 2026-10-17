@@ -500,7 +500,7 @@ wheels = [
 [[package]]
 name = "travel-transcript"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
     { name = "ollama" },

@@ -1,5 +1,7 @@
 #!/bin/sh
-# Ollama's lifetime is the job's lifetime: start it, run the batch, exit.
+# Start Ollama, then serve the pipeline over HTTP for the Worker to call.
+# With no arguments this runs the server; with arguments it runs a one-off job
+# instead, which is how `docker run ... "<url>"` still works locally.
 set -e
 
 ollama serve &
@@ -7,8 +9,10 @@ ollama serve &
 echo "waiting for ollama..."
 timeout 60 sh -c 'until ollama list >/dev/null 2>&1; do sleep 1; done'
 
-echo "running pipeline..."
-# The venv's interpreter directly -- `uv run` would re-check the environment
-# and can rebuild it, which is pure latency inside an already-built image.
-# Args are passed through: <video_url> [city]
+if [ "$#" -eq 0 ]; then
+    echo "starting server..."
+    exec /app/.venv/bin/python server.py
+fi
+
+echo "running one-off job..."
 exec /app/.venv/bin/python main.py "$@"

@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "travel-places",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+
+  "containers": [
+    {
+      "class_name": "PipelineContainer",
+      "image": "./Dockerfile",
+      // 8 GiB: the 4B model needs ~3.6GB resident plus KV cache and compute
+      // buffers. standard-1 (4 GiB) thrashes -- measured.
+      "instance_type": "standard-3",
+      // One instance. Ollama holds the model in memory, so a second concurrent
+      // job would contend for RAM rather than finish sooner.
+      "max_instances": 1
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "PIPELINE", "class_name": "PipelineContainer" }]
+  },
+
+  "exports": {
+    "PipelineContainer": { "type": "durable-object", "storage": "sqlite" }
+  },
+
+  // Sundays at 03:00 UTC.
+  "triggers": {
+    "crons": ["0 3 * * 0"]
+  }
+}

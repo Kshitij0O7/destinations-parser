@@ -14,9 +14,3 @@ dependencies = [
     "supadata>=1.6.0",
 ]
 
-[project.scripts]
-travel-transcript = "travel_transcript:main"
-
-[build-system]
-requires = ["uv_build>=0.12.3,<0.14.0"]
-build-backend = "uv_build"
