@@ -24,14 +24,10 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project
 
-# Bake the model in. The job is triggered on a cache miss while a user waits,
-# so a ~3.5 minute download at startup would sit inside their wait. Placed
-# before the code copy so a code change doesn't re-pull it.
-# stdout is dropped because the progress bar emits megabytes of carriage
-# returns; errors still surface on stderr and the && chain still catches them.
-RUN (ollama serve &) \
-    && timeout 300 sh -c 'until ollama list >/dev/null 2>&1; do sleep 1; done' \
-    && ollama pull qwen3.5:4b >/dev/null
+# The model is NOT baked in. A ~5GB image exceeds the disk available to
+# Cloudflare's build environment, which fails while unpacking the layers.
+# entrypoint.sh pulls it at startup instead -- measured at 58s on Cloudflare's
+# network (63 MB/s), which is noise against a job that runs for minutes.
 
 COPY . .
 

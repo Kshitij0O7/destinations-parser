@@ -1,5 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  // Must match the Worker name in the Cloudflare dashboard. Workers Builds
+  // defaults that to the repo name, so override it there to match this.
   "name": "travel-places",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
